@@ -96,6 +96,7 @@ class XText(Gtk.Misc):
                         Gdk.EventMask.BUTTON_RELEASE_MASK |
                         Gdk.EventMask.POINTER_MOTION_MASK)
         self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        self.connect("size-allocate", XText.size_allocate_cb)
 
         self.selection_active = False
         self.selection_start = None
@@ -229,15 +230,9 @@ class XText(Gtk.Misc):
         cr.paint()
 
         # draw lines
-        self.sublines = []
         with saved(cr):
-            i = -1
-            for line in self.buffer:
-                sublines = list(self.break_line(line, allocation.width))
-                self.sublines += sublines
-                for subline in sublines:
-                    i += 1
-                    self.draw_line(cr, subline, i, self.fontheight * i)
+            for i, subline in enumerate(self.sublines):
+                self.draw_line(cr, subline, i, self.fontheight * i)
 
         # self.draw_sep(cr)
 
@@ -374,7 +369,10 @@ class XText(Gtk.Misc):
             if subline is None or self.selection_start == self.selection_end:
                 self.selection_start = self.selection_end = None
             else:
-                self.clipboard.set_text(self.get_selection(), -1)
+                try:
+                    self.clipboard.set_text(self.get_selection(), -1)
+                except IndexError:
+                    pass  # don't set clipboard text if lines out of range are selected
             self.queue_draw()
 
     def do_motion_notify_event(self, event):
@@ -457,9 +455,14 @@ class XText(Gtk.Misc):
         (sl, si), (el, ei) = sorted([self.selection_start, self.selection_end])
         sublines = self.sublines[sl:el+1]
         if not sublines:
-            raise Exception("sublines modified?")
+            raise IndexError("selection out of range")
         if len(sublines) == 1:
             return sublines[0][si:ei]
         # more than one line
         return strip_attributes("\n".join([sublines[0][si:]] + sublines[1:-1] + [sublines[-1][:ei]]))
 
+    def size_allocate_cb(self, rect):
+        # break lines
+        self.sublines = []
+        for line in self.buffer:
+            self.sublines += list(self.break_line(line, rect.width))
