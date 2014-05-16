@@ -22,7 +22,6 @@ XText is a GTK+ 3 widget, so it uses `Gtk`, `Gdk`, `Pango` and `PangoCairo` from
 
 ## To do
 
-- clipboard text contains line breaks of word wrap
 - indentation of text with a movable separator line
 - update selection on resize
 - URL detection with a user-defined click handler

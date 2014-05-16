@@ -156,6 +156,7 @@ class XText(Gtk.Misc):
         fcolor = None
         bcolor = None
         underline = False
+        startattrs = dict(bold=bold, fcolor=fcolor, bcolor=bcolor, underline=underline, first_subline=True)
 
         left = 0
         text = line
@@ -205,18 +206,15 @@ class XText(Gtk.Misc):
                         i -= j
                         offset = 1
                         break
-                prefix = bold * "\x02" + underline * "\x1F" + \
-                         ("\x03" +
-                          str(fcolor) * (fcolor is not None) +
-                          ("," + str(bcolor)) * (bcolor is not None)
-                          if fcolor is not None or bcolor is not None
-                          else "")
-                yield line[:i]
-                text = line = prefix + line[i+offset:]
+                startattrs["offset"] = offset
+                yield startattrs, line[:i]
+                startattrs = dict(bold=bold, fcolor=fcolor, bcolor=bcolor, underline=underline, first_subline=False)
+                text = line = line[i+offset:]
                 left = 0
                 i = -1
 
-        yield line
+        startattrs["offset"] = 0
+        yield startattrs, line
 
     def do_draw(self, cr):
         """
@@ -231,19 +229,19 @@ class XText(Gtk.Misc):
 
         # draw lines
         with saved(cr):
-            for i, subline in enumerate(self.sublines):
-                self.draw_line(cr, subline, i, self.fontheight * i)
+            for i, (attrs, subline) in enumerate(self.sublines):
+                self.draw_line(cr, attrs, subline, i, self.fontheight * i)
 
         # self.draw_sep(cr)
 
-    def draw_line(self, cr, text, subline_no, top=0):
+    def draw_line(self, cr, attrs, text, subline_no, top=0):
         """
         Draw a subline.
         """
-        bold = False
-        fcolor = None
-        bcolor = None
-        underline = False
+        bold = attrs["bold"]
+        fcolor = attrs["fcolor"]
+        bcolor = attrs["bcolor"]
+        underline = attrs["underline"]
 
         if self.selection_start is not None and self.selection_end is not None:
             s_start, s_end = sorted([self.selection_start, self.selection_end])
@@ -442,7 +440,7 @@ class XText(Gtk.Misc):
         """
         subline_no = int(y / self.fontheight)
         if subline_no < len(self.sublines):
-            return subline_no, self.sublines[subline_no]
+            return subline_no, self.sublines[subline_no][1]
         return subline_no, ""
 
     def get_selection(self):
@@ -457,9 +455,13 @@ class XText(Gtk.Misc):
         if not sublines:
             raise IndexError("selection out of range")
         if len(sublines) == 1:
-            return sublines[0][si:ei]
+            return sublines[0][1][si:ei]
         # more than one line
-        return strip_attributes("\n".join([sublines[0][si:]] + sublines[1:-1] + [sublines[-1][:ei]]))
+        text = sublines[0][1][si:] + " " * sublines[0][0]["offset"]  # first
+        for subline in sublines[1:-1]:  # middle
+            text += "\n" * subline[0]["first_subline"] + subline[1] + " " * subline[0]["offset"]
+        text += "\n" * sublines[-1][0]["first_subline"] + sublines[-1][1][:ei]  # last
+        return strip_attributes(text)
 
     def size_allocate_cb(self, rect):
         # break lines
