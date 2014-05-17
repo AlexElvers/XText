@@ -36,7 +36,7 @@ class SelectionTest(unittest.TestCase):
         c_width = layout.get_pixel_size()[0]
 
         xtext.sublines = [
-            "abbc",
+            ({}, "abbc"),
         ]
         self.assertEqual((0, "abbc"), xtext.find_subline_at_pos(height / 2))
         self.assertEqual((0, 0, "a"), xtext.find_char_at_pos(a_width / 2, height / 2))
@@ -50,8 +50,8 @@ class SelectionTest(unittest.TestCase):
 
 
         xtext.sublines = [
-            "abbb",
-            "ccca"
+            ({}, "abbb"),
+            ({}, "ccca"),
         ]
         self.assertEqual((1, "ccca"), xtext.find_subline_at_pos(height * 1.5))
         self.assertEqual((1, 3, "a"), xtext.find_char_at_pos(3 * c_width + 1, height * 1.5))
