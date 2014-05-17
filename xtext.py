@@ -509,6 +509,8 @@ class XText(Gtk.Misc):
                 # start or end after last character
                 if sc != -1:
                     sl = i + 1
+                    si = 0
                 if ec != -1:
                     el = i + 1
+                    ei = 0
             self.selection_start, self.selection_end = (sl, si), (el, ei)
