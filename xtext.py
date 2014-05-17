@@ -460,11 +460,55 @@ class XText(Gtk.Misc):
         text = sublines[0][1][si:] + " " * sublines[0][0]["offset"]  # first
         for subline in sublines[1:-1]:  # middle
             text += "\n" * subline[0]["first_subline"] + subline[1] + " " * subline[0]["offset"]
-        text += "\n" * sublines[-1][0]["first_subline"] + sublines[-1][1][:ei]  # last
+        if el >= len(self.sublines):
+            text += "\n" * sublines[-1][0]["first_subline"] + sublines[-1][1]  # last, full line
+        else:
+            text += "\n" * sublines[-1][0]["first_subline"] + sublines[-1][1][:ei]  # last, end contained
         return strip_attributes(text)
 
     def size_allocate_cb(self, rect):
+        # save selection
+        if self.selection_start is not None:
+            (sl, si), (el, ei) = self.selection_start, self.selection_end
+            sc = si
+            ec = ei
+            for i, line in enumerate(self.sublines):
+                if i < sl:
+                    sc += len(line[1]) + line[0]["offset"]
+                if i < el:
+                    ec += len(line[1]) + line[0]["offset"]
+                elif i >= sl:
+                    break
+
         # break lines
         self.sublines = []
         for line in self.buffer:
             self.sublines += list(self.break_line(line, rect.width))
+
+        # restore selection
+        if self.selection_start is not None:
+            sl = el = 0
+            for i, line in enumerate(self.sublines):
+                if sc != -1:
+                    if sc < len(line[1]) + line[0]["offset"]:
+                        sl = i
+                        si = sc
+                        sc = -1
+                    else:
+                        sc -= len(line[1]) + line[0]["offset"]
+                if ec != -1:
+                    if ec < len(line[1]) + line[0]["offset"]:
+                        el = i
+                        ei = ec
+                        ec = -1
+                    else:
+                        ec -= len(line[1]) + line[0]["offset"]
+                if sc == ec == -1:
+                    break
+            else:
+                # start or end after last character
+                if sc != -1:
+                    sl = i + 1
+                if ec != -1:
+                    el = i + 1
+            self.selection_start, self.selection_end = (sl, si), (el, ei)

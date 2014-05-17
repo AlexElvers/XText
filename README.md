@@ -19,11 +19,11 @@ XText is a GTK+ 3 widget, so it uses `Gtk`, `Gdk`, `Pango` and `PangoCairo` from
     - reset of all attributes with `\x0F` (single attributes can be reset with the special character again)
 - word wrap
 - selection of text with automatic copy to clipboard
+- update marked text on resize
 
 ## To do
 
 - indentation of text with a movable separator line
-- update selection on resize
 - URL detection with a user-defined click handler
 
 ## License
