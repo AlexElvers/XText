@@ -36,11 +36,13 @@ def halfpx(*args):
     """
     return [x + .5 for x in args]
 
+
 def color(*args):
     """
     Convert a color in 0x0000 .. 0xffff to 0.0 .. 1.0
     """
     return tuple(x / 0xffff for x in args)
+
 
 @contextmanager
 def saved(cr):
@@ -64,6 +66,7 @@ def saved(cr):
         yield cr
     finally:
         cr.restore()
+
 
 def strip_attributes(text):
     """
@@ -117,22 +120,22 @@ class XText(Gtk.Misc):
             "dark_sep":   color(0x1111, 0x1111, 0x1111),
             "thin_sep":   color(0x8e38, 0x8e38, 0x9f38),
             "text":       color(0x0000, 0x0000, 0x0000),
-             0:           color(0xd3d3, 0xd7d7, 0xcfcf), # white
-             1:           color(0x2e2e, 0x3434, 0x3636), # black
-             2:           color(0x3434, 0x6565, 0xa4a4), # blue
-             3:           color(0x4e4e, 0x9a9a, 0x0606), # green
-             4:           color(0xcccc, 0x0000, 0x0000), # red
-             5:           color(0x8f8f, 0x3939, 0x0202), # light red
-             6:           color(0x5c5c, 0x3535, 0x6666), # purple
-             7:           color(0xcece, 0x5c5c, 0x0000), # orange
-             8:           color(0xc4c4, 0xa0a0, 0x0000), # yellow
-             9:           color(0x7373, 0xd2d2, 0x1616), # green
-            10:           color(0x1111, 0xa8a8, 0x7979), # aqua
-            11:           color(0x5858, 0xa1a1, 0x9d9d), # light aqua
-            12:           color(0x5757, 0x7979, 0x9e9e), # blue
-            13:           color(0xa0d0, 0x42d4, 0x6562), # light purple
-            14:           color(0x5555, 0x5757, 0x5353), # grey
-            15:           color(0x8888, 0x8a8a, 0x8585), # light grey
+            0:            color(0xd3d3, 0xd7d7, 0xcfcf),  # white
+            1:            color(0x2e2e, 0x3434, 0x3636),  # black
+            2:            color(0x3434, 0x6565, 0xa4a4),  # blue
+            3:            color(0x4e4e, 0x9a9a, 0x0606),  # green
+            4:            color(0xcccc, 0x0000, 0x0000),  # red
+            5:            color(0x8f8f, 0x3939, 0x0202),  # light red
+            6:            color(0x5c5c, 0x3535, 0x6666),  # purple
+            7:            color(0xcece, 0x5c5c, 0x0000),  # orange
+            8:            color(0xc4c4, 0xa0a0, 0x0000),  # yellow
+            9:            color(0x7373, 0xd2d2, 0x1616),  # green
+            10:           color(0x1111, 0xa8a8, 0x7979),  # aqua
+            11:           color(0x5858, 0xa1a1, 0x9d9d),  # light aqua
+            12:           color(0x5757, 0x7979, 0x9e9e),  # blue
+            13:           color(0xa0d0, 0x42d4, 0x6562),  # light purple
+            14:           color(0x5555, 0x5757, 0x5353),  # grey
+            15:           color(0x8888, 0x8a8a, 0x8585),  # light grey
         }
 
         self.fonts = {
@@ -220,7 +223,6 @@ class XText(Gtk.Misc):
         """
         Draw the widget graphics.
         """
-        allocation = self.get_allocation()
         self.buffer_indent = max(self.buffer_indent, self.margin)
 
         # draw background
@@ -320,7 +322,7 @@ class XText(Gtk.Misc):
 
             left += width
 
-    def draw_sep(self, cr):
+    def draw_sep(self, cr, x):
         """
         Draw the separator line.
 
@@ -417,8 +419,6 @@ class XText(Gtk.Misc):
                     else:
                         text = text[2:]
                         i += 2
-                else:
-                    bcolor = None
                 continue
 
             layout = self.create_pango_layout(c)

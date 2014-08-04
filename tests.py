@@ -3,6 +3,7 @@ import xtext
 
 
 class HelperTest(unittest.TestCase):
+
     def test_strip_attributes(self):
         sa = xtext.strip_attributes
 
@@ -18,6 +19,7 @@ class HelperTest(unittest.TestCase):
 
 
 class SelectionTest(unittest.TestCase):
+
     def setUp(self):
         self.xtext = xtext.XText()
 
@@ -48,7 +50,6 @@ class SelectionTest(unittest.TestCase):
         self.assertEqual((0, 3, "c"), xtext.find_char_at_pos(a_width + 2 * b_width + c_width - 1, height / 2))
         self.assertEqual((0, 4, ""), xtext.find_char_at_pos(a_width + 2 * b_width + c_width + 1, height / 2))
 
-
         xtext.sublines = [
             ({}, "abbb"),
             ({}, "ccca"),
@@ -59,7 +60,6 @@ class SelectionTest(unittest.TestCase):
 
     def test_selection_full_line(self):
         xtext = self.xtext
-        height = xtext.fontheight
 
         layout = xtext.create_pango_layout("a")
         layout.set_font_description(xtext.fonts["normal"])
@@ -71,7 +71,8 @@ class SelectionTest(unittest.TestCase):
         layout.set_font_description(xtext.fonts["normal"])
         c_width = layout.get_pixel_size()[0]
 
-        class Rect: pass
+        class Rect:
+            pass
         r = Rect()
 
         line = "aaaabbbbcccc"
@@ -109,7 +110,6 @@ class SelectionTest(unittest.TestCase):
 
     def test_selection(self):
         xtext = self.xtext
-        height = xtext.fontheight
 
         layout = xtext.create_pango_layout("a")
         layout.set_font_description(xtext.fonts["normal"])
@@ -121,7 +121,8 @@ class SelectionTest(unittest.TestCase):
         layout.set_font_description(xtext.fonts["normal"])
         c_width = layout.get_pixel_size()[0]
 
-        class Rect: pass
+        class Rect:
+            pass
         r = Rect()
 
         line = "aabcbcaaabac"
