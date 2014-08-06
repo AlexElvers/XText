@@ -91,9 +91,8 @@ def strip_attributes(text):
 class XText(Gtk.Misc):
     __gtype_name__ = 'XText'
 
-    def __init__(self, *args, **kwds):
-        super().__init__(*args, **kwds)
-        self.set_size_request(200, 400)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
                         Gdk.EventMask.BUTTON_RELEASE_MASK |
@@ -149,6 +148,10 @@ class XText(Gtk.Misc):
         metrics = pcx.get_metrics(self.fonts["normal"])
         self.ascent = metrics.get_ascent() // Pango.SCALE
         self.fontheight = (metrics.get_ascent() + metrics.get_descent()) // Pango.SCALE
+
+    def redraw(self):
+        self.size_allocate_cb(self.get_allocation())
+        self.queue_draw()
 
     def break_line(self, line, max_width):
         """

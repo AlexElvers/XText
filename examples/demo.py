@@ -1,8 +1,14 @@
+#!/usr/bin/env python3
+
+import sys
+sys.path.append("..")
+
 from gi.repository import Gtk
 from xtext import XText
 
 
 xtext = XText()
+xtext.set_size_request(200, 400)
 xtext.buffer = [
     "Hello World!",
     "Hello World!UnderlineResetUnderlineReset",
