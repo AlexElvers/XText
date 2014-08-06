@@ -23,11 +23,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  TORT  OR  OTHERWISE,  ARISING
 FROM, OUT OF OR IN CONNECTION  WITH  THE  SOFTWARE  OR  THE  USE  OR  OTHER
 DEALINGS IN THE SOFTWARE.
 """
-from gi.repository import Gtk, Gdk, Pango, PangoCairo
-from contextlib import contextmanager
+
+import enum
 import cairo
 
-__all__ = ["XText"]
+from gi.repository import Gtk, Gdk, Pango, PangoCairo
+from contextlib import contextmanager
+
+__all__ = ["XText", "FormatType", "Color", "ColorCode"]
 
 
 def halfpx(*args):
@@ -72,8 +75,8 @@ def strip_attributes(text):
     """
     Remove attributes (bold, underline, color) from a text.
     """
-    text = text.replace("\x02", "").replace("\x0F", "").replace("\x1F", "")
-    parts = text.split("\x03")
+    text = text.replace(FormatType.BOLD, "").replace(FormatType.RESET, "").replace(FormatType.UNDERLINE, "")
+    parts = text.split(FormatType.COLOR)
     for p in range(len(parts[1:])):
         part = parts[p+1]
         if part[0:1] in "0123456789":
@@ -86,6 +89,101 @@ def strip_attributes(text):
                 part = part[1:]
         parts[p+1] = part
     return "".join(parts)
+
+
+class FormatType(str, enum.Enum):
+
+    """
+    The format codes for BOLD, COLOR, UNDERLINE and RESET
+
+    Usage:
+    >>> FormatType.BOLD + 'hello'
+    '\\x02hello'
+    """
+
+    BOLD = "\x02"
+    COLOR = "\x03"
+    RESET = "\x0F"
+    UNDERLINE = "\x1F"
+
+    def __str__(self):
+        return self.value
+
+
+class ColorCode(enum.IntEnum):
+
+    """
+    The color codes
+
+    Usage:
+    >>> FormatType.COLOR + ColorCode.ORANGE
+    '\\x0307'
+    >>> Color(ColorCode.ORANGE)
+    '\\x0307'
+    """
+
+    WHITE = 0
+    BLACK = 1
+    BLUE = 2
+    GREEN = 3
+    RED = 4
+    LIGHT_RED = 5
+    PURPLE = 6
+    ORANGE = 7
+    YELLOW = 8
+    LIGHT_GREEN = 9
+    AQUA = 10
+    LIGHT_AQUA = 11
+    LIGHT_BLUE = 12
+    LIGHT_PURPLE = 13
+    GREY = 14
+    LIGHT_GREY = 15
+
+    def __str__(self):
+        return "%02d" % self
+
+    def __add__(self, other):
+        return "%02d%s" % (self, other)
+
+    def __radd__(self, other):
+        return "%s%02d" % (other, self)
+
+
+class Color:
+
+    """
+    A color contains a foreground and a background part.
+
+    Usage:
+    >>> Color(ColorCode.RED) + "hello"
+    '\\x0304hello'
+    >>> Color(4) + "hello"
+    '\\x0304hello'
+    >>> Color(bg=ColorCode.RED) + "hello"
+    '\\x03,04hello'
+    >>> Color(ColorCode.RED, ColorCode.BLUE) + "hello"
+    '\\x0304,02hello'
+    >>> Color() + "hello"
+    '\\x03hello'
+    """
+
+    def __init__(self, fg=None, bg=None):
+        self.fg = fg
+        self.bg = bg
+
+    def __str__(self):
+        t = FormatType.COLOR
+        if self.fg is not None:
+            t += "%02d" % self.fg
+        if self.bg is not None:
+            t += ",%02d" % self.bg
+        return t
+
+    def __add__(self, other):
+        return "%s%s" % (self, other)
+
+    def __radd__(self, other):
+        return "%s%s" % (other, self)
 
 
 class XText(Gtk.Misc):
@@ -111,30 +209,30 @@ class XText(Gtk.Misc):
         self.sublines = []
 
         self.colors = {
-            "background": color(0xf0f0, 0xf0f0, 0xf0f0),
-            "foreground": color(0x2512, 0x29e8, 0x2b85),
-            "mark_backg": color(0x2020, 0x4a4a, 0x8787),
-            "mark_foreg": color(0xd3d3, 0xd7d7, 0xcfcf),
-            "light_sep":  color(0xffff, 0xffff, 0xffff),
-            "dark_sep":   color(0x1111, 0x1111, 0x1111),
-            "thin_sep":   color(0x8e38, 0x8e38, 0x9f38),
-            "text":       color(0x0000, 0x0000, 0x0000),
-            0:            color(0xd3d3, 0xd7d7, 0xcfcf),  # white
-            1:            color(0x2e2e, 0x3434, 0x3636),  # black
-            2:            color(0x3434, 0x6565, 0xa4a4),  # blue
-            3:            color(0x4e4e, 0x9a9a, 0x0606),  # green
-            4:            color(0xcccc, 0x0000, 0x0000),  # red
-            5:            color(0x8f8f, 0x3939, 0x0202),  # light red
-            6:            color(0x5c5c, 0x3535, 0x6666),  # purple
-            7:            color(0xcece, 0x5c5c, 0x0000),  # orange
-            8:            color(0xc4c4, 0xa0a0, 0x0000),  # yellow
-            9:            color(0x7373, 0xd2d2, 0x1616),  # green
-            10:           color(0x1111, 0xa8a8, 0x7979),  # aqua
-            11:           color(0x5858, 0xa1a1, 0x9d9d),  # light aqua
-            12:           color(0x5757, 0x7979, 0x9e9e),  # blue
-            13:           color(0xa0d0, 0x42d4, 0x6562),  # light purple
-            14:           color(0x5555, 0x5757, 0x5353),  # grey
-            15:           color(0x8888, 0x8a8a, 0x8585),  # light grey
+            "background":           color(0xf0f0, 0xf0f0, 0xf0f0),
+            "foreground":           color(0x2512, 0x29e8, 0x2b85),
+            "mark_backg":           color(0x2020, 0x4a4a, 0x8787),
+            "mark_foreg":           color(0xd3d3, 0xd7d7, 0xcfcf),
+            "light_sep":            color(0xffff, 0xffff, 0xffff),
+            "dark_sep":             color(0x1111, 0x1111, 0x1111),
+            "thin_sep":             color(0x8e38, 0x8e38, 0x9f38),
+            "text":                 color(0x0000, 0x0000, 0x0000),
+            ColorCode.WHITE:        color(0xd3d3, 0xd7d7, 0xcfcf),
+            ColorCode.BLACK:        color(0x2e2e, 0x3434, 0x3636),
+            ColorCode.BLUE:         color(0x3434, 0x6565, 0xa4a4),
+            ColorCode.GREEN:        color(0x4e4e, 0x9a9a, 0x0606),
+            ColorCode.RED:          color(0xcccc, 0x0000, 0x0000),
+            ColorCode.LIGHT_RED:    color(0x8f8f, 0x3939, 0x0202),
+            ColorCode.PURPLE:       color(0x5c5c, 0x3535, 0x6666),
+            ColorCode.ORANGE:       color(0xcece, 0x5c5c, 0x0000),
+            ColorCode.YELLOW:       color(0xc4c4, 0xa0a0, 0x0000),
+            ColorCode.LIGHT_GREEN:  color(0x7373, 0xd2d2, 0x1616),
+            ColorCode.AQUA:         color(0x1111, 0xa8a8, 0x7979),
+            ColorCode.LIGHT_AQUA:   color(0x5858, 0xa1a1, 0x9d9d),
+            ColorCode.LIGHT_BLUE:   color(0x5757, 0x7979, 0x9e9e),
+            ColorCode.LIGHT_PURPLE: color(0xa0d0, 0x42d4, 0x6562),
+            ColorCode.GREY:         color(0x5555, 0x5757, 0x5353),
+            ColorCode.LIGHT_GREY:   color(0x8888, 0x8a8a, 0x8585),
         }
 
         self.fonts = {
@@ -170,10 +268,10 @@ class XText(Gtk.Misc):
         while text:
             i += 1
             c, text = text[0], text[1:]
-            if c == "\x02":
+            if c == FormatType.BOLD:
                 bold = not bold
                 continue
-            if c == "\x03":
+            if c == FormatType.COLOR:
                 fcolor = bcolor = None
                 if len(text) > 0 and text[0] in "0123456789":
                     if len(text) > 1 and text[1] in "0123456789":
@@ -192,11 +290,11 @@ class XText(Gtk.Misc):
                 else:
                     bcolor = None
                 continue
-            if c == "\x0F":
+            if c == FormatType.RESET:
                 bold = underline = False
                 fcolor = bcolor = None
                 continue
-            if c == "\x1F":
+            if c == FormatType.UNDERLINE:
                 underline = not underline
                 continue
 
@@ -258,10 +356,10 @@ class XText(Gtk.Misc):
         while text:
             i += 1
             c, text = text[0], text[1:]
-            if c == "\x02":
+            if c == FormatType.BOLD:
                 bold = not bold
                 continue
-            if c == "\x03":
+            if c == FormatType.COLOR:
                 fcolor = bcolor = None
                 if len(text) > 0 and text[0] in "0123456789":
                     if len(text) > 1 and text[1] in "0123456789":
@@ -280,11 +378,11 @@ class XText(Gtk.Misc):
                 else:
                     bcolor = None
                 continue
-            if c == "\x0F":
+            if c == FormatType.RESET:
                 bold = underline = False
                 fcolor = bcolor = None
                 continue
-            if c == "\x1F":
+            if c == FormatType.UNDERLINE:
                 underline = not underline
                 continue
 
@@ -405,9 +503,9 @@ class XText(Gtk.Misc):
         while text:
             i += 1
             c, text = text[0], text[1:]
-            if c in ("\x02", "\x0F", "\x1F"):
+            if c in (FormatType.BOLD, FormatType.RESET, FormatType.UNDERLINE):
                 continue
-            if c == "\x03":
+            if c == FormatType.COLOR:
                 if len(text) > 0 and text[0] in "0123456789":
                     if len(text) > 1 and text[1] in "0123456789":
                         text = text[2:]

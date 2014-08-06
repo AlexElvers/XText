@@ -17,6 +17,89 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(sa("\x0304Hello\x03,02 World\x031,1"), "Hello World")
         self.assertEqual(sa("\x0304\x03,02\x031,1"), "")
 
+    def test_format_type(self):
+        FT = xtext.FormatType
+
+        self.assertEqual(str(FT.BOLD), "\x02")
+        self.assertEqual(str(FT.COLOR), "\x03")
+        self.assertEqual(str(FT.RESET), "\x0F")
+        self.assertEqual(str(FT.UNDERLINE), "\x1F")
+
+        self.assertEqual("hello" + FT.BOLD, "hello\x02")
+        self.assertEqual(FT.BOLD + "hello", "\x02hello")
+        self.assertEqual(FT.BOLD + FT.COLOR, "\x02\x03")
+
+    def test_color_code(self):
+        FT = xtext.FormatType
+        CC = xtext.ColorCode
+
+        self.assertEqual(CC.WHITE,         0)
+        self.assertEqual(CC.BLACK,         1)
+        self.assertEqual(CC.BLUE,          2)
+        self.assertEqual(CC.GREEN,         3)
+        self.assertEqual(CC.RED,           4)
+        self.assertEqual(CC.LIGHT_RED,     5)
+        self.assertEqual(CC.PURPLE,        6)
+        self.assertEqual(CC.ORANGE,        7)
+        self.assertEqual(CC.YELLOW,        8)
+        self.assertEqual(CC.LIGHT_GREEN,   9)
+        self.assertEqual(CC.AQUA,         10)
+        self.assertEqual(CC.LIGHT_AQUA,   11)
+        self.assertEqual(CC.LIGHT_BLUE,   12)
+        self.assertEqual(CC.LIGHT_PURPLE, 13)
+        self.assertEqual(CC.GREY,         14)
+        self.assertEqual(CC.LIGHT_GREY,   15)
+
+        self.assertEqual(str(CC.WHITE),        "00")
+        self.assertEqual(str(CC.BLACK),        "01")
+        self.assertEqual(str(CC.BLUE),         "02")
+        self.assertEqual(str(CC.GREEN),        "03")
+        self.assertEqual(str(CC.RED),          "04")
+        self.assertEqual(str(CC.LIGHT_RED),    "05")
+        self.assertEqual(str(CC.PURPLE),       "06")
+        self.assertEqual(str(CC.ORANGE),       "07")
+        self.assertEqual(str(CC.YELLOW),       "08")
+        self.assertEqual(str(CC.LIGHT_GREEN),  "09")
+        self.assertEqual(str(CC.AQUA),         "10")
+        self.assertEqual(str(CC.LIGHT_AQUA),   "11")
+        self.assertEqual(str(CC.LIGHT_BLUE),   "12")
+        self.assertEqual(str(CC.LIGHT_PURPLE), "13")
+        self.assertEqual(str(CC.GREY),         "14")
+        self.assertEqual(str(CC.LIGHT_GREY),   "15")
+
+        self.assertEqual("hello" + CC.WHITE, "hello00")
+        self.assertEqual(CC.WHITE + "hello", "00hello")
+        self.assertEqual(CC.WHITE + CC.BLUE, "0002")
+        self.assertEqual(FT.COLOR + CC.BLUE, "\x0302")
+        self.assertEqual(CC.BLUE + FT.COLOR, "02\x03")
+
+    def test_color(self):
+        FT = xtext.FormatType
+        C = xtext.Color
+        CC = xtext.ColorCode
+
+        self.assertEqual(str(C(CC.RED)), "\x0304")
+        self.assertEqual(str(C(bg=CC.RED)), "\x03,04")
+        self.assertEqual(str(C(CC.RED, CC.BLUE)), "\x0304,02")
+        self.assertEqual(str(C(4)), "\x0304")
+        self.assertEqual(str(C(bg=4)), "\x03,04")
+        self.assertEqual(str(C(4, 2)), "\x0304,02")
+        self.assertEqual(str(C()), "\x03")
+
+        self.assertEqual("hello" + C(CC.RED), "hello\x0304")
+        self.assertEqual("hello" + C(bg=CC.RED), "hello\x03,04")
+        self.assertEqual("hello" + C(CC.RED, CC.BLUE), "hello\x0304,02")
+        self.assertEqual("hello" + C(), "hello\x03")
+
+        self.assertEqual(C(CC.RED) + "hello", "\x0304hello")
+        self.assertEqual(C(bg=CC.RED) + "hello", "\x03,04hello")
+        self.assertEqual(C(CC.RED, CC.BLUE) + "hello", "\x0304,02hello")
+        self.assertEqual(C() + "hello", "\x03hello")
+
+        self.assertEqual(C(CC.RED) + C(CC.BLUE), "\x0304\x0302")
+        self.assertEqual(C(CC.RED) + FT.BOLD, "\x0304\x02")
+        self.assertEqual(FT.BOLD + C(CC.RED), "\x02\x0304")
+
 
 class SelectionTest(unittest.TestCase):
 
