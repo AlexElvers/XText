@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 
 import enum
 import cairo
+import math
 
 from gi.repository import Gtk, Gdk, Pango, PangoCairo
 from contextlib import contextmanager
@@ -207,6 +208,9 @@ class XText(Gtk.Misc):
         self.buffer_indent = 50
         self.margin = 2
         self.sublines = []
+        self.start_subline = 0  # the first displayed subline
+        self.start_offset = 0  # the offset of the first subline
+        self.max_lines = 0.0  # maximal number of lines that fit into the widget height (float)
 
         self.colors = {
             "background":           color(0xf0f0, 0xf0f0, 0xf0f0),
@@ -332,8 +336,8 @@ class XText(Gtk.Misc):
 
         # draw lines
         with saved(cr):
-            for i, (attrs, subline) in enumerate(self.sublines):
-                self.draw_line(cr, attrs, subline, i, self.fontheight * i)
+            for i, (attrs, subline) in enumerate(self.sublines[self.start_subline:self.start_subline + int(self.max_lines + 1)]):
+                self.draw_line(cr, attrs, subline, i + self.start_subline, self.fontheight * i - self.start_offset)
 
         # self.draw_sep(cr)
 
@@ -568,6 +572,8 @@ class XText(Gtk.Misc):
         return strip_attributes(text)
 
     def size_allocate_cb(self, rect):
+        self.max_lines = self.get_allocation().height / self.fontheight
+
         # save selection
         if self.selection_start is not None:
             (sl, si), (el, ei) = self.selection_start, self.selection_end
@@ -615,3 +621,40 @@ class XText(Gtk.Misc):
                     el = i + 1
                     ei = 0
             self.selection_start, self.selection_end = (sl, si), (el, ei)
+
+
+class ScrollableXText(Gtk.Box):
+    __gtype_name__ = 'ScrollableXText'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        adjustment = Gtk.Adjustment(value=0.0,
+                                    lower=0.0,
+                                    upper=1.0,
+                                    step_increment=0.0,
+                                    page_increment=0.0,
+                                    page_size=0.0)
+        adjustment.connect("value-changed", self.value_changed)
+
+        self.set_orientation(Gtk.Orientation.HORIZONTAL)
+        self.xtext = XText()
+        self.scrollbar = Gtk.Scrollbar(orientation=Gtk.Orientation.VERTICAL,
+                                       adjustment=adjustment)
+
+        self.pack_start(self.xtext, True, True, 0)
+        self.pack_start(self.scrollbar, False, True, 0)
+
+    def value_changed(self, adjustment):
+        numsublines = len(self.xtext.sublines)
+        maxlines = self.xtext.max_lines
+        if numsublines >= maxlines:
+            x = math.modf(adjustment.get_value() * (numsublines - maxlines))
+            self.xtext.start_subline = int(x[1])
+            self.xtext.start_offset = self.xtext.fontheight * x[0]
+            self.xtext.queue_draw()
+        else:
+            self.scrollbar.set_sensitive(False)
+            self.xtext.start_subline = 0
+            self.xtext.start_offset = 0
+            self.xtext.queue_draw()
