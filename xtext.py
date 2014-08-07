@@ -629,23 +629,27 @@ class ScrollableXText(Gtk.Box):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        adjustment = Gtk.Adjustment(value=0.0,
-                                    lower=0.0,
-                                    upper=1.0,
-                                    step_increment=0.0,
-                                    page_increment=0.0,
-                                    page_size=0.0)
-        adjustment.connect("value-changed", self.value_changed)
+        self.adjustment = Gtk.Adjustment(value=0.0,
+                                         lower=0.0,
+                                         upper=1.0,
+                                         step_increment=0.05,
+                                         page_increment=0.05,
+                                         page_size=0.05)
+        self.adjustment.connect("value-changed", self.value_changed_cb)
 
         self.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.xtext = XText()
         self.scrollbar = Gtk.Scrollbar(orientation=Gtk.Orientation.VERTICAL,
-                                       adjustment=adjustment)
+                                       adjustment=self.adjustment)
 
         self.pack_start(self.xtext, True, True, 0)
         self.pack_start(self.scrollbar, False, True, 0)
 
-    def value_changed(self, adjustment):
+        self.xtext.add_events(Gdk.EventMask.SCROLL_MASK)
+        self.xtext.connect("scroll-event", self.scroll_cb)
+        self.xtext.connect("size-allocate", self.size_allocate_cb)
+
+    def value_changed_cb(self, adjustment):
         numsublines = len(self.xtext.sublines)
         maxlines = self.xtext.max_lines
         if numsublines >= maxlines:
@@ -653,3 +657,12 @@ class ScrollableXText(Gtk.Box):
             self.xtext.start_subline = int(x[1])
             self.xtext.start_offset = int(self.xtext.fontheight * x[0])
             self.xtext.queue_draw()
+
+    def size_allocate_cb(self, widget, allocation):
+        self.adjustment.value_changed()
+
+    def scroll_cb(self, widget, event):
+        if event.direction == Gdk.ScrollDirection.UP:
+            self.adjustment.set_value(max(self.adjustment.get_value() - 1 / (len(self.xtext.sublines) - self.xtext.max_lines), 0))
+        elif event.direction == Gdk.ScrollDirection.DOWN:
+            self.adjustment.set_value(min(self.adjustment.get_value() + 1 / (len(self.xtext.sublines) - self.xtext.max_lines), 1))
