@@ -27,11 +27,12 @@ DEALINGS IN THE SOFTWARE.
 import enum
 import cairo
 import math
+import functools
 
 from gi.repository import Gtk, Gdk, Pango, PangoCairo
 from contextlib import contextmanager
 
-__all__ = ["XText", "FormatType", "Color", "ColorCode"]
+__all__ = ["XText", "ScrollableXText", "FormatType", "Color", "ColorCode"]
 
 
 def halfpx(*args):
@@ -203,7 +204,6 @@ class XText(Gtk.Misc):
         self.selection_start = None
         self.selection_end = None
 
-        self.space_width = 16
         self.buffer = []
         self.buffer_indent = 50
         self.margin = 2
@@ -250,6 +250,12 @@ class XText(Gtk.Misc):
         metrics = pcx.get_metrics(self.fonts["normal"])
         self.ascent = metrics.get_ascent() // Pango.SCALE
         self.fontheight = (metrics.get_ascent() + metrics.get_descent()) // Pango.SCALE
+
+    @functools.lru_cache(maxsize=128)
+    def get_pango_layout(self, char, bold):
+        layout = self.create_pango_layout(char)
+        layout.set_font_description(self.fonts["bold" if bold else "normal"])
+        return layout, layout.get_pixel_size()
 
     def redraw(self):
         self.size_allocate_cb(self.get_allocation())
@@ -302,9 +308,7 @@ class XText(Gtk.Misc):
                 underline = not underline
                 continue
 
-            layout = self.create_pango_layout(c)
-            layout.set_font_description(self.fonts["normal"])
-            width, height = layout.get_pixel_size()
+            layout, (width, height) = self.get_pango_layout(c, bold)
             left += width
 
             if left > max_width:
@@ -390,9 +394,7 @@ class XText(Gtk.Misc):
                 underline = not underline
                 continue
 
-            layout = self.create_pango_layout(c)
-            layout.set_font_description(self.fonts["bold" if bold else "normal"])
-            width, height = layout.get_pixel_size()
+            layout, (width, height) = self.get_pango_layout(c, bold)
 
             # draw background
             cr.rectangle(left, top, width, height)
@@ -526,9 +528,7 @@ class XText(Gtk.Misc):
                         i += 2
                 continue
 
-            layout = self.create_pango_layout(c)
-            layout.set_font_description(self.fonts["normal"])
-            width, height = layout.get_pixel_size()
+            layout, (width, height) = self.get_pango_layout(c, False)
 
             if left <= x < left + width:
                 return subline_no, i, c
@@ -651,10 +651,5 @@ class ScrollableXText(Gtk.Box):
         if numsublines >= maxlines:
             x = math.modf(adjustment.get_value() * (numsublines - maxlines))
             self.xtext.start_subline = int(x[1])
-            self.xtext.start_offset = self.xtext.fontheight * x[0]
-            self.xtext.queue_draw()
-        else:
-            self.scrollbar.set_sensitive(False)
-            self.xtext.start_subline = 0
-            self.xtext.start_offset = 0
+            self.xtext.start_offset = int(self.xtext.fontheight * x[0])
             self.xtext.queue_draw()
